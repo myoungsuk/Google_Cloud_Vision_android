@@ -39,6 +39,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import android.Manifest;
@@ -80,7 +81,7 @@ import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
     //    private static final String CLOUD_VISION_API_KEY = BuildConfig.API_KEY;
-    private static final String CLOUD_VISION_API_KEY = "put your API key here";
+    private static final String CLOUD_VISION_API_KEY = "AIzaSyDYqi3NYMninIEnrFkdOWQwcQjWwbAYauE";
     public static final String FILE_NAME = "temp.jpg";
     private static final String ANDROID_CERT_HEADER = "X-Android-Cert";
     private static final String ANDROID_PACKAGE_HEADER = "X-Android-Package";
@@ -286,7 +287,10 @@ public class MainActivity extends AppCompatActivity {
             try {
                 Log.d(TAG, "created Cloud Vision request object, sending request");
                 BatchAnnotateImagesResponse response = mRequest.execute();
-                return convertResponseToString(response);
+
+                String text = Arrays.toString(convertResponseToString(response));
+
+                return text;
 
             } catch (GoogleJsonResponseException e) {
                 Log.d(TAG, "failed to make API request because " + e.getContent());
@@ -340,33 +344,172 @@ public class MainActivity extends AppCompatActivity {
         return Bitmap.createScaledBitmap(bitmap, resizedWidth, resizedHeight, false);
     }
 
-    private static String convertResponseToString(BatchAnnotateImagesResponse response) {
-        StringBuilder message = new StringBuilder("I found these things:\n\n");
 
-        //라벨
-//        List<EntityAnnotation> labels = response.getResponses().get(0).getLabelAnnotations();
+
+//    private static String convertResponseToString(BatchAnnotateImagesResponse response) {
+//        StringBuilder message = new StringBuilder("I found these things:\n\n");
+//
+//
+//        //텍스트
+//        List<EntityAnnotation> labels = response.getResponses().get(0).getTextAnnotations();
 //        if (labels != null) {
-//            for (EntityAnnotation label : labels) {
-//                message.append(String.format(Locale.US, "%.3f: %s", label.getScore(), label.getDescription()));
-//                message.append("\n");
-//            }
+//
+//            message.append(labels.get(0).getDescription());
+//
+//
 //        } else {
 //            message.append("nothing");
 //        }
+//
+//        //메세지 로그 확인
+//        String messageText = message.toString();
+//        Log.d(TAG, "Message: " + messageText);
+//
+//        return message.toString();
+//    }
 
-        //텍스트
+
+    private static String[] convertResponseToString(BatchAnnotateImagesResponse response) {
+        // 응답으로부터 라벨을 얻습니다.
         List<EntityAnnotation> labels = response.getResponses().get(0).getTextAnnotations();
-        if (labels != null) {
-//            for (EntityAnnotation label : labels) {
-//                message.append(String.format(Locale.US, "%.3f: %s", label.getScore(), label.getDescription()));
-//                message.append("\n");
-//            }
-            message.append(labels.get(0).getDescription());
 
+        if (labels != null)
+        {
+            // 라벨의 수와 동일한 크기로 배열을 초기화합니다.
+            String[] txt = new String[labels.size()];
+
+            // 라벨을 반복하고 설명을 배열에 저장합니다.
+            for (int i = 0; i < labels.size(); i++)
+            {
+                txt[i] = labels.get(i).getDescription();
+
+                // 디버깅 목적으로, 설명을 출력할 수 있습니다.
+                Log.d(TAG, "Message: " + txt[i]);
+            }
+// 명함 데이터 담는 변수
+            String email = ""; // 이메일
+            String phoneNum = ""; // 폰번호
+            String tel = ""; // 회사 번호
+            String fax = ""; // 팩스
+
+            // TODO: 필요한 형식 더 추가하기
+            // parsing
+            for (int i = 0; i < txt.length; i++)
+            {
+                // 휴대폰 번호 (M)
+                if (txt[i].contains("-") && txt[i].contains("010") || txt[i].contains("82"))
+                {
+
+                    if (txt[i].contains("M."))
+                    {
+                        phoneNum = txt[i].replace("M.", " ").trim().substring(0, 13);
+                    } else if (txt[i].contains("M"))
+                    {
+                        phoneNum = txt[i].replace("M", " ").trim().substring(0, 13);
+                    } else
+                    {
+                        phoneNum = txt[i].trim();
+                    }
+                }
+
+                // companyTel (T)
+                if (txt[i].contains("-") && txt[i].contains("T."))
+                {
+                    String telA = txt[i].substring(txt[i].indexOf("T."));
+                    if (telA.length() >= 15)
+                    {
+                        tel = txt[i].substring(txt[i].indexOf("T."), txt[i].indexOf("T.") + 15).replace("T.", " ").trim();
+                    } else if (telA.length() < 15 || telA.length() >= 14)
+                    {
+                        tel = txt[i].substring(txt[i].indexOf("T."), txt[i].indexOf("T.") + 14).replace("T.", " ").trim();
+                    } else
+                    {
+                        tel = txt[i].substring(txt[i].indexOf("T."), telA.length()).replace("T.", " ").trim();
+                    }
+                } else if (txt[i].contains("-") && txt[i].contains("T"))
+                {
+                    String telA = txt[i].substring(txt[i].indexOf("T"));
+                    if (telA.length() >= 15)
+                    {
+                        tel = txt[i].substring(txt[i].indexOf("T"), txt[i].indexOf("T") + 15).replace("T", " ").trim();
+                    } else if (telA.length() < 15 || telA.length() >= 14)
+                    {
+                        tel = txt[i].substring(txt[i].indexOf("T"), txt[i].indexOf("T") + 14).replace("T", " ").trim();
+                    } else
+                    {
+                        tel = txt[i].substring(txt[i].indexOf("T"), telA.length()).replace("T", " ").trim();
+                    }
+                }
+
+                // fax (F)
+                if (txt[i].contains("-") && txt[i].contains("F."))
+                {
+                    String faxA = txt[i].substring(txt[i].indexOf("F."));
+                    if (faxA.length() >= 15)
+                    {
+                        fax = txt[i].substring(txt[i].indexOf("F."), txt[i].indexOf("F.") + 15).replace("F.", " ").trim();
+                    } else if (faxA.length() < 15 || faxA.length() >= 14)
+                    {
+                        fax = txt[i].substring(txt[i].indexOf("F."), txt[i].indexOf("F.") + 14).replace("F.", " ").trim();
+                    } else
+                    {
+                        fax = txt[i].substring(txt[i].indexOf("F."), faxA.length()).replace("F.", " ").trim();
+                    }
+                } else if (txt[i].contains("-") && txt[i].contains("F,"))
+                {
+                    String faxA = txt[i].substring(txt[i].indexOf("F,"));
+                    if (faxA.length() >= 15)
+                    {
+                        fax = txt[i].substring(txt[i].indexOf("F,"), txt[i].indexOf("F,") + 15).replace("F,", " ").trim();
+                    } else if (faxA.length() < 15 || faxA.length() >= 14)
+                    {
+                        fax = txt[i].substring(txt[i].indexOf("F,"), txt[i].indexOf("F,") + 14).replace("F,", " ").trim();
+                    } else
+                    {
+                        fax = txt[i].substring(txt[i].indexOf("F,"), faxA.length()).replace("F,", " ").trim();
+                    }
+                } else if (txt[i].contains("-") && txt[i].contains("F"))
+                {
+                    String faxA = txt[i].substring(txt[i].indexOf("F"));
+                    if (faxA.length() >= 15)
+                    {
+                        fax = txt[i].substring(txt[i].indexOf("F"), txt[i].indexOf("F") + 15).replace("F", " ").trim();
+                    } else if (faxA.length() < 15 || faxA.length() >= 14)
+                    {
+                        fax = txt[i].substring(txt[i].indexOf("F"), txt[i].indexOf("F") + 14).replace("F", " ").trim();
+                    } else
+                    {
+                        fax = txt[i].substring(txt[i].indexOf("F"), faxA.length()).replace("F", " ").trim();
+                    }
+                }
+
+                // 이메일
+                if (txt[i].contains("@"))
+                {
+                    if (txt[i].contains("E."))
+                    {
+                        email = txt[i].substring(txt[i].indexOf("E."), txt[i].indexOf(".com") + 4).replace("E.", " ").trim();
+                    } else if (txt[i].contains("E"))
+                    {
+                        email = txt[i].substring(txt[i].indexOf("E"), txt[i].indexOf(".com") + 4).replace("E", " ").trim();
+                    } else
+                    {
+                        email = txt[i];
+                    }
+                }
+            }
+
+            System.out.println("phoneNum: " + phoneNum);
+
+
+            // 배열을 반환합니다.
+            return txt;
         } else {
-            message.append("nothing");
+            // 라벨이 없는 경우, 빈 배열을 반환하거나, 사용 사례에 따라 null을 반환할 수 있습니다.
+            return new String[0];
         }
 
-        return message.toString();
+
     }
+
 }
